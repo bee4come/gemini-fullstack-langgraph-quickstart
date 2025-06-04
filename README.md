@@ -40,12 +40,13 @@ cd backend
 pip install .
 ```
 
-**3. Run the Development Server:**
+**3. Run the CLI Agent:**
 
 ```bash
-make dev
+cd backend
+python -m agent.cli "<topic>"
 ```
-This starts the backend development server. Open your browser to `http://127.0.0.1:2024` to interact with the LangGraph UI.
+The CLI prints each step of the agent and writes the final JSON output to `result.json`.
 
 ## How the Backend Agent Works (High-Level)
 
