@@ -1,22 +1,4 @@
-# Stage 1: Build React Frontend
-FROM node:20-alpine AS frontend-builder
-
-# Set working directory for frontend
-WORKDIR /app/frontend
-
-# Copy frontend package files and install dependencies
-COPY frontend/package.json ./
-COPY frontend/package-lock.json ./
-# If you use yarn or pnpm, adjust accordingly (e.g., copy yarn.lock or pnpm-lock.yaml and use yarn install or pnpm install)
-RUN npm install
-
-# Copy the rest of the frontend source code
-COPY frontend/ ./
-
-# Build the frontend
-RUN npm run build
-
-# Stage 2: Python Backend
+# Python Backend
 FROM docker.io/langchain/langgraph-api:3.11
 
 # -- Install UV --
@@ -27,11 +9,6 @@ RUN apt-get update && apt-get install -y curl && \
 ENV PATH="/root/.local/bin:$PATH"
 # -- End of UV installation --
 
-# -- Copy built frontend from builder stage --
-# The app.py expects the frontend build to be at ../frontend/dist relative to its own location.
-# If app.py is at /deps/backend/src/agent/app.py, then ../frontend/dist resolves to /deps/frontend/dist.
-COPY --from=frontend-builder /app/frontend/dist /deps/frontend/dist
-# -- End of copying built frontend --
 
 # -- Adding local package . --
 ADD backend/ /deps/backend
