@@ -60,26 +60,23 @@ The core of the backend is a LangGraph agent defined in `backend/src/agent/graph
 4.  **Iterative Refinement:** If gaps are found or the information is insufficient, it generates follow-up queries and repeats the web research and reflection steps (up to a configured maximum number of loops).
 5.  **Finalize Answer:** Once the research is deemed sufficient, the agent synthesizes the gathered information into a coherent answer, including citations from the web sources, using a Gemini model.
 
-## Deployment
+## Agent Configuration
 
-In production you can run the backend using Docker. LangGraph requires a Redis instance and a Postgres database. Redis is used as a pub-sub broker to enable streaming real time output from background runs. Postgres is used to store assistants, threads, runs, persist thread state and long term memory, and to manage the state of the background task queue with 'exactly once' semantics. For more details on how to deploy the backend server, take a look at the [LangGraph Documentation](https://langchain-ai.github.io/langgraph/concepts/deployment_options/). Below is an example of how to build a Docker image and run it via `docker-compose`.
+You can customize the agent by setting environment variables (or passing a
+`RunnableConfig` in code). The defaults are defined in
+`backend/src/agent/configuration.py`.
 
-_Note: For the docker-compose.yml example you need a LangSmith API key, you can get one from [LangSmith](https://smith.langchain.com/settings)._
+- `QUERY_GENERATOR_MODEL` – LLM model for generating search queries (default
+  `gemini-2.0-flash`).
+- `REFLECTION_MODEL` – Model used to analyse knowledge gaps (default
+  `gemini-2.5-flash-preview-04-17`).
+- `ANSWER_MODEL` – Model used to produce the final structured answer (default
+  `gemini-2.5-pro-preview-05-06`).
+- `NUMBER_OF_INITIAL_QUERIES` – How many search queries to generate initially
+  (default `3`).
+- `MAX_RESEARCH_LOOPS` – Maximum number of web research loops (default `2`).
 
-
-**1. Build the Docker Image:**
-
-   Run the following command from the **project root directory**:
-   ```bash
-   docker build -t gemini-langgraph -f Dockerfile .
-   ```
-**2. Run the Production Server:**
-
-   ```bash
-   GOOGLE_API_KEY=<your_api_key> LANGSMITH_API_KEY=<your_langsmith_api_key> docker-compose up
-   ```
-
-Open your browser and navigate to `http://localhost:8123` to access the API.
+Add these variables to your `.env` file to override the defaults.
 
 ## Technologies Used
 

@@ -152,9 +152,9 @@ def reflection(state: OverallState, config: RunnableConfig) -> ReflectionState:
         Dictionary with state update, including search_query key containing the generated follow-up query
     """
     configurable = Configuration.from_runnable_config(config)
-    # Increment the research loop count and get the reasoning model
+    # Increment the research loop count and select the reflection model
     state["research_loop_count"] = state.get("research_loop_count", 0) + 1
-    reasoning_model = state.get("reasoning_model") or configurable.reasoning_model
+    reflection_model = configurable.reflection_model
 
     # Format the prompt
     current_date = get_current_date()
@@ -165,7 +165,7 @@ def reflection(state: OverallState, config: RunnableConfig) -> ReflectionState:
     )
     # init Reasoning Model
     llm = ChatGoogleGenerativeAI(
-        model=reasoning_model,
+        model=reflection_model,
         temperature=1.0,
         max_retries=2,
         api_key=os.getenv("GOOGLE_API_KEY"),
@@ -232,7 +232,7 @@ def finalize_answer(state: OverallState, config: RunnableConfig):
         Dictionary with state update, including running_summary key containing the formatted final summary with sources
     """
     configurable = Configuration.from_runnable_config(config)
-    reasoning_model = state.get("reasoning_model") or configurable.reasoning_model
+    answer_model = configurable.answer_model
 
     # Format the prompt
     current_date = get_current_date()
@@ -244,7 +244,7 @@ def finalize_answer(state: OverallState, config: RunnableConfig):
 
     # init Reasoning Model, default to Gemini 2.5 Flash
     llm = ChatGoogleGenerativeAI(
-        model=reasoning_model,
+        model=answer_model,
         temperature=0,
         max_retries=2,
         api_key=os.getenv("GOOGLE_API_KEY"),
