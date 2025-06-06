@@ -1,8 +1,5 @@
-# Node / Frontend
+# Node dependencies
 node_modules/
-frontend/dist/
-frontend/.vite/
-frontend/coverage/
 .DS_Store
 *.local
 

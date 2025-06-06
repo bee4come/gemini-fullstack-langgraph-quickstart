@@ -1,6 +1,7 @@
 import os
+import json
 
-from agent.tools_and_schemas import SearchQueryList, Reflection
+from agent.tools_and_schemas import SearchQueryList, Reflection, FeynmanDiagramEntry
 from dotenv import load_dotenv
 from langchain_core.messages import AIMessage
 from langgraph.types import Send
@@ -33,11 +34,11 @@ from agent.utils import (
 
 load_dotenv()
 
-if os.getenv("GEMINI_API_KEY") is None:
-    raise ValueError("GEMINI_API_KEY is not set")
+if os.getenv("GOOGLE_API_KEY") is None:
+    raise ValueError("GOOGLE_API_KEY is not set")
 
 # Used for Google Search API
-genai_client = Client(api_key=os.getenv("GEMINI_API_KEY"))
+genai_client = Client(api_key=os.getenv("GOOGLE_API_KEY"))
 
 
 # Nodes
@@ -65,7 +66,7 @@ def generate_query(state: OverallState, config: RunnableConfig) -> QueryGenerati
         model=configurable.query_generator_model,
         temperature=1.0,
         max_retries=2,
-        api_key=os.getenv("GEMINI_API_KEY"),
+        api_key=os.getenv("GOOGLE_API_KEY"),
     )
     structured_llm = llm.with_structured_output(SearchQueryList)
 
@@ -151,9 +152,9 @@ def reflection(state: OverallState, config: RunnableConfig) -> ReflectionState:
         Dictionary with state update, including search_query key containing the generated follow-up query
     """
     configurable = Configuration.from_runnable_config(config)
-    # Increment the research loop count and get the reasoning model
+    # Increment the research loop count and select the reflection model
     state["research_loop_count"] = state.get("research_loop_count", 0) + 1
-    reasoning_model = state.get("reasoning_model") or configurable.reasoning_model
+    reflection_model = configurable.reflection_model
 
     # Format the prompt
     current_date = get_current_date()
@@ -164,10 +165,10 @@ def reflection(state: OverallState, config: RunnableConfig) -> ReflectionState:
     )
     # init Reasoning Model
     llm = ChatGoogleGenerativeAI(
-        model=reasoning_model,
+        model=reflection_model,
         temperature=1.0,
         max_retries=2,
-        api_key=os.getenv("GEMINI_API_KEY"),
+        api_key=os.getenv("GOOGLE_API_KEY"),
     )
     result = llm.with_structured_output(Reflection).invoke(formatted_prompt)
 
@@ -231,7 +232,7 @@ def finalize_answer(state: OverallState, config: RunnableConfig):
         Dictionary with state update, including running_summary key containing the formatted final summary with sources
     """
     configurable = Configuration.from_runnable_config(config)
-    reasoning_model = state.get("reasoning_model") or configurable.reasoning_model
+    answer_model = configurable.answer_model
 
     # Format the prompt
     current_date = get_current_date()
@@ -243,24 +244,26 @@ def finalize_answer(state: OverallState, config: RunnableConfig):
 
     # init Reasoning Model, default to Gemini 2.5 Flash
     llm = ChatGoogleGenerativeAI(
-        model=reasoning_model,
+        model=answer_model,
         temperature=0,
         max_retries=2,
-        api_key=os.getenv("GEMINI_API_KEY"),
+        api_key=os.getenv("GOOGLE_API_KEY"),
     )
-    result = llm.invoke(formatted_prompt)
+    structured_llm = llm.with_structured_output(FeynmanDiagramEntry)
+    result = structured_llm.invoke(formatted_prompt)
 
-    # Replace the short urls with the original urls and add all used urls to the sources_gathered
+    # Replace short urls with originals in the tikz source field if needed
     unique_sources = []
+    json_content = result.model_dump()
     for source in state["sources_gathered"]:
-        if source["short_url"] in result.content:
-            result.content = result.content.replace(
+        if source["short_url"] in json_content.get("source", ""):
+            json_content["source"] = json_content["source"].replace(
                 source["short_url"], source["value"]
             )
             unique_sources.append(source)
 
     return {
-        "messages": [AIMessage(content=result.content)],
+        "messages": [AIMessage(content=json.dumps(json_content, ensure_ascii=False))],
         "sources_gathered": unique_sources,
     }
 

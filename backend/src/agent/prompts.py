@@ -6,20 +6,21 @@ def get_current_date():
     return datetime.now().strftime("%B %d, %Y")
 
 
-query_writer_instructions = """Your goal is to generate sophisticated and diverse web search queries. These queries are intended for an advanced automated web research tool capable of analyzing complex results, following links, and synthesizing information.
+query_writer_instructions = """You are building a database of Feynman diagram TikZ code. 
+Generate search queries that will help locate web pages containing TikZ examples
+for drawing the physics process described below.
 
 Instructions:
-- Always prefer a single search query, only add another query if the original question requests multiple aspects or elements and one query is not enough.
-- Each query should focus on one specific aspect of the original question.
-- Don't produce more than {number_queries} queries.
-- Queries should be diverse, if the topic is broad, generate more than 1 query.
-- Don't generate multiple similar queries, 1 is enough.
-- Query should ensure that the most current information is gathered. The current date is {current_date}.
+- Prefer a single query unless multiple are clearly necessary.
+- Keep each query focused on one aspect of the process.
+- Never produce more than {number_queries} queries.
+- Ensure queries are diverse and mention keywords like `tikz` and `feynman diagram`.
+- Queries should gather the most current information. The current date is {current_date}.
 
-Format: 
-- Format your response as a JSON object with ALL three of these exact keys:
-   - "rationale": Brief explanation of why these queries are relevant
-   - "query": A list of search queries
+Format:
+- Respond as a JSON object with the keys:
+   - "rationale": short reason why these queries should return relevant TikZ code
+   - "query": a list of search queries
 
 Example:
 
@@ -34,20 +35,21 @@ Topic: What revenue grew more last year apple stock or the number of people buyi
 Context: {research_topic}"""
 
 
-web_searcher_instructions = """Conduct targeted Google Searches to gather the most recent, credible information on "{research_topic}" and synthesize it into a verifiable text artifact.
+web_searcher_instructions = """Search the web for pages that contain TikZ code
+for drawing the following particle physics process: "{research_topic}".
 
 Instructions:
-- Query should ensure that the most current information is gathered. The current date is {current_date}.
-- Conduct multiple, diverse searches to gather comprehensive information.
-- Consolidate key findings while meticulously tracking the source(s) for each specific piece of information.
-- The output should be a well-written summary or report based on your search findings. 
-- Only include the information found in the search results, don't make up any information.
+- Ensure queries gather the most up-to-date sources. Today is {current_date}.
+- Look for code blocks containing `\\begin{tikzpicture}` or mentioning
+  `tikz-feynman`.
+- Summarize any snippets you find and include their source URLs.
+- Do not fabricate code; only return what is present in the search results.
 
 Research Topic:
 {research_topic}
 """
 
-reflection_instructions = """You are an expert research assistant analyzing summaries about "{research_topic}".
+reflection_instructions = """You are an expert assistant gathering TikZ code for Feynman diagrams. Analyse the summaries about "{research_topic}".
 
 Instructions:
 - Identify knowledge gaps or areas that need deeper exploration and generate a follow-up query. (1 or multiple).
@@ -61,8 +63,8 @@ Requirements:
 Output Format:
 - Format your response as a JSON object with these exact keys:
    - "is_sufficient": true or false
-   - "knowledge_gap": Describe what information is missing or needs clarification
-   - "follow_up_queries": Write a specific question to address this gap
+  - "knowledge_gap": Describe what information is missing or needs clarification
+  - "follow_up_queries": Write a specific question to address this gap
 
 Example:
 ```json
@@ -79,18 +81,22 @@ Summaries:
 {summaries}
 """
 
-answer_instructions = """Generate a high-quality answer to the user's question based on the provided summaries.
+answer_instructions = """From the gathered summaries create a JSON object describing a Feynman diagram entry.
 
-Instructions:
-- The current date is {current_date}.
-- You are the final step of a multi-step research process, don't mention that you are the final step. 
-- You have access to all the information gathered from the previous steps.
-- You have access to the user's question.
-- Generate a high-quality answer to the user's question based on the provided summaries and the user's question.
-- you MUST include all the citations from the summaries in the answer correctly.
+Required keys:
+  - "topic": short title of the process
+  - "reaction": LaTeX reaction string
+  - "particles": list of the particles involved
+  - "description": one sentence description of the process
+  - "tikz": TikZ code snippet if available (leave empty string if not found)
+  - "source": URL where the TikZ code was found
+  - "process_type": type of the process (e.g. scattering, decay)
+  - "source_type": type of the website (wikipedia, stackexchange, etc)
+
+Only return the JSON. Use the information from the summaries and the user's request below.
 
 User Context:
-- {research_topic}
+{research_topic}
 
 Summaries:
 {summaries}"""
